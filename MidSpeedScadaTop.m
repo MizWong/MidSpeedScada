@@ -109,5 +109,5 @@ subplot(3,3,fP);plot(rxSym,'.');title('Post Equalize');
 fprintf( 'EVM Post-EQ = %f%%\r\n', hEVM(rxSym) );
 
 (sum( hDem(rxSym) ~= txBit ) / length(txBit)) * 100
-
+ 
 %hs = spectrum.periodogram; figure;psd(hs, rxSym, 'Fs',FSIF, 'CenterDC',true)

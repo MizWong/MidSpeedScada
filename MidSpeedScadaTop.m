@@ -95,7 +95,7 @@ rxSym    =   rxSymUp(T0:BB_OSR:end);
 
 fprintf( 'T0 = %d\r\n', T0 );
 
-fprintf( 'EVM Post-RRC = %f%%\r\n', step(hEVM, txSym, rxSym) );
+fprintf( 'EVM Post-RRC = %f%%\r\n', step(hEVM, step(hMod,step(hDem,rxSym)), rxSym) );
 
 fP=fP+1;
 subplot(3,3,fP);plot(rxSym,'.');title('Post DownSample');
@@ -105,7 +105,7 @@ rxSym    =   equalize( hDFE, rxSym, txSym(1:50) );
 fP=fP+1;
 subplot(3,3,fP);plot(rxSym,'.');title('Post Equalize');
 
-fprintf( 'EVM Post-EQ = %f%%\r\n', step(hEVM, txSym, rxSym) );
+fprintf( 'EVM Post-EQ = %f%%\r\n', step(hEVM, step(hMod,step(hDem,rxSym)), rxSym) );
 
 (sum( step(hDem, rxSym) ~= txBit ) / length(txBit)) * 100
  

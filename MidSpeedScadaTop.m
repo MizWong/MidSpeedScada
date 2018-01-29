@@ -47,14 +47,13 @@ pdb      =   [0 -22.3];
 tau      =   [0 5e-6];
 RlChan   =   rayleighchan( (1 / FsIF), fd, tau, pdb);
 
-hDFE     =   dfe( 10, 5, rls(0.99), constellation(hMod).' );
+hDFE     =   dfe( 10, 10, rls(0.995), constellation(hMod).' );
 
-hEVM     =   comm.EVM( 'ReferenceSignalSource', 'Estimated from reference constellation', ...
-                       'ReferenceConstellation', constellation(hMod).' );
+hEVM     =   comm.EVM();
 
 %% Transmitter
 txBit    =   randi( [0,1], T*Rb, 1 );
-txSym    =   hMod( txBit );
+txSym    =   step(hMod, txBit );
 txSymUp  =   zeros( length(txSym)*BB_OSR, 1 );
 txSymUp(1 : BB_OSR : end) = txSym;
 txSymUp  =   txSymUp * BB_OSR;
@@ -96,18 +95,18 @@ rxSym    =   rxSymUp(T0:BB_OSR:end);
 
 fprintf( 'T0 = %d\r\n', T0 );
 
-fprintf( 'EVM Post-RRC = %f%%\r\n', hEVM(rxSym) );
+fprintf( 'EVM Post-RRC = %f%%\r\n', step(hEVM, txSym, rxSym) );
 
 fP=fP+1;
 subplot(3,3,fP);plot(rxSym,'.');title('Post DownSample');
 
-rxSym    =   equalize( hDFE, rxSym, txSym(1:1000) );
+rxSym    =   equalize( hDFE, rxSym, txSym(1:50) );
 
 fP=fP+1;
 subplot(3,3,fP);plot(rxSym,'.');title('Post Equalize');
 
-fprintf( 'EVM Post-EQ = %f%%\r\n', hEVM(rxSym) );
+fprintf( 'EVM Post-EQ = %f%%\r\n', step(hEVM, txSym, rxSym) );
 
-(sum( hDem(rxSym) ~= txBit ) / length(txBit)) * 100
+(sum( step(hDem, rxSym) ~= txBit ) / length(txBit)) * 100
  
 %hs = spectrum.periodogram; figure;psd(hs, rxSym, 'Fs',FSIF, 'CenterDC',true)

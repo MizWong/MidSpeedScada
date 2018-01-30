@@ -1,13 +1,16 @@
-function [ hDFE ] = fnDFECreate( FFTAPs, FBTAPs, RLSLamda, hDEM )
+function [ hDFE ] = fnDFECreate( FFTAPs, FBTAPs, RLSLamda, hMOD, hDEM )
 
 hDFE.FFTAPs = FFTAPs;
 hDFE.FBTAPs = FBTAPs;
 hDFE.RLSLamda = RLSLamda;
 
-hDFE.hFFRLS_I = fnRLSCreate( FFTAPs, RLSLamda );
-hDFE.hFFRLS_Q = fnRLSCreate( FFTAPs, RLSLamda );
-hDFE.hFBRLS_I = fnRLSCreate( FBTAPs, RLSLamda );
-hDFE.hFBRLS_Q = fnRLSCreate( FBTAPs, RLSLamda );
+hDFE.hRLS = fnRLSCreate( FFTAPs + FBTAPs, RLSLamda );
+hDFE.hMOD = hMOD;
 hDFE.hDEM = hDEM;
+
+hDFE.wFF = zeros(FFTAPs, 1);
+hDFE.wFB = zeros(FBTAPs, 1);
+
+hDFE.e = [];
 
 end

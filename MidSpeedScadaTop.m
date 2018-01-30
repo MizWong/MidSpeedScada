@@ -51,18 +51,20 @@ hDFE     =   dfe( 10, 10, rls(0.995), constellation(hMod).' );
 
 hEVM     =   comm.EVM();
 
+hMyDFE   =   fnDFECreate(10, 10, 0.995, hMod, hDem);
+
 %% Transmitter
 txBit    =   randi( [0,1], T*Rb, 1 );
 txSym    =   step(hMod, txBit );
 txSymUp  =   zeros( length(txSym)*BB_OSR, 1 );
 txSymUp(1 : BB_OSR : end) = txSym;
 txSymUp  =   txSymUp * BB_OSR;
-txSymUp  =   FilterConv( txSymUp', coefRRC' )' ;
+txSymUp  =   FilterConv( txSymUp.', coefRRC' ).' ;
 
 txSymIF  =   zeros( length(txSymUp)*IF_OSR, 1 );
 txSymIF(1 : IF_OSR : end) = txSymUp;
 txSymIF  =   txSymIF * IF_OSR;
-txSymIF  =   FilterConv( txSymIF', coefIF' )' ;
+txSymIF  =   FilterConv( txSymIF.', coefIF' ).' ;
 txSymIF  =   txSymIF .* exp( 1j*( 2*pi*txcFreq*tIF' + txcPhi0 ) );
 
 %% Channel
@@ -72,7 +74,7 @@ rxSymIF  =   awgn( rxSymIF, 0, 'measured' );
 
 %% Receiver
 rxSymIF  =   rxSymIF ./ exp( 1j*( 2*pi*rxcFreq*tIF' + rxcPhi0 ) );
-rxSymIF  =   FilterConv( rxSymIF', coefIF' )' ;
+rxSymIF  =   FilterConv( rxSymIF.', coefIF' ).' ;
 rxSymUp  =   zeros( length(rxSymIF) / IF_OSR, 1 );
 rxSymUp  =   rxSymIF( 1 : IF_OSR : end );
 
@@ -82,7 +84,7 @@ subplot(3,3,fP);psd(spectrum.periodogram, rxSymUp, 'Fs',FsBB, 'CenterDC',true);t
 fP=fP+1;
 subplot(3,3,fP);plot(rxSymUp,'.');title('Pre RRC');
 
-rxSymUp  =   FilterConv( rxSymUp', coefRRC' )';
+rxSymUp  =   FilterConv( rxSymUp.', coefRRC' ).';
 
 fP=fP+1;
 subplot(3,3,fP);plot(rxSymUp,'.');title('Post RRC');
@@ -100,13 +102,21 @@ fprintf( 'EVM Post-RRC = %f%%\r\n', step(hEVM, step(hMod,step(hDem,rxSym)), rxSy
 fP=fP+1;
 subplot(3,3,fP);plot(rxSym,'.');title('Post DownSample');
 
-rxSym    =   equalize( hDFE, rxSym, txSym(1:50) );
+rxSymOrg = rxSym;
+
+rxSym    =   equalize( hDFE, rxSym, txSym(1:200) );
+
+[hMyDFE, vy, vyDcs] = fnDFE( hMyDFE, rxSymOrg, [1:200], txSym );
 
 fP=fP+1;
 subplot(3,3,fP);plot(rxSym,'.');title('Post Equalize');
 
+fP=fP+1;
+subplot(3,3,fP);plot(vy,'.');title('Post My Equalize');
+
 fprintf( 'EVM Post-EQ = %f%%\r\n', step(hEVM, step(hMod,step(hDem,rxSym)), rxSym) );
 
-(sum( step(hDem, rxSym) ~= txBit ) / length(txBit)) * 100
+(sum( step(hDem, rxSym(201:end)) ~= txBit(801:end) ) / length(txBit(401:end))) * 100
  
+(sum( vyDcs(401:end)' ~= txBit(401:end) ) / length(txBit(401:end))) * 100
 %hs = spectrum.periodogram; figure;psd(hs, rxSym, 'Fs',FSIF, 'CenterDC',true)

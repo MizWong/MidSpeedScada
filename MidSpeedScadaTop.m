@@ -28,9 +28,9 @@ coefIF   =   [2.89420106699409e-21,9.04626555805899e-07,2.30213395261237e-06,4.2
 hMod     =   comm.RectangularQAMModulator( M, 'BitInput', true );
 hDem     =   comm.RectangularQAMDemodulator( M, 'BitOutput', true );
 
-T        =   1;
+T        =   0.02;
 
-nTSHead  =   200;
+nTSHead  =   50;
 nFTSDvd  =   20;
 nFTSLen  =   1;
 
@@ -50,8 +50,6 @@ fd       =   20;%( txcFreq * dSpped ) / 3e8;
 pdb      =   [0 -22.3];
 tau      =   [0 5e-6];
 RlChan   =   rayleighchan( (1 / FsIF), fd, tau, pdb);
-
-hDFE     =   dfe( 10, 10, rls(0.995), constellation(hMod).' );
 
 hEVM     =   comm.EVM();
 
@@ -74,7 +72,7 @@ txSymIF  =   txSymIF .* exp( 1j*( 2*pi*txcFreq*tIF' + txcPhi0 ) );
 %% Channel
 rxSymIF  =   txSymIF;
 rxSymIF  =   filter( RlChan, rxSymIF );
-rxSymIF  =   awgn( rxSymIF, 0, 'measured' );
+rxSymIF  =   awgn( rxSymIF, -10, 'measured' );
 
 %% Receiver
 rxSymIF  =   rxSymIF ./ exp( 1j*( 2*pi*rxcFreq*tIF' + rxcPhi0 ) );
@@ -83,8 +81,6 @@ rxSymUp  =   zeros( length(rxSymIF) / IF_OSR, 1 );
 rxSymUp  =   rxSymIF( 1 : IF_OSR : end );
 
 fP=fP+1;subplot(3,3,fP);psd(spectrum.periodogram, rxSymUp, 'Fs',FsBB, 'CenterDC',true);title('PSD RX');
-
-fP=fP+1;subplot(3,3,fP);plot(rxSymUp,'.');title('Pre RRC');
 
 rxSymUp  =   FilterConv( rxSymUp.', coefRRC' ).';
 
@@ -101,18 +97,6 @@ fprintf( 'T0 = %d\r\n', T0 );
 fP=fP+1;subplot(3,3,fP);plot(rxSym,'.');title('Post DownSample');
 fprintf( 'EVM Post-DownSample = %f%%\r\n', step(hEVM, step(hMod,step(hDem,rxSym)), rxSym) );
 
-nField = 0;
-for ii = 1 : nFTSDvd : length(rxSym)
-    nField = nField + 1;
-    FldErr(nField) = mean( txSym(ii:ii+nFTSLen)./rxSym(ii:ii+nFTSLen) );
-end
-
-symErr = resample(FldErr,nFTSDvd,1).';
-
-rxSym = rxSym .* symErr;
-
-fP=fP+1;subplot(3,3,fP);plot(rxSym,'.');title('Post Field Sync');
-
 nWeights = 1;  
 stepSize = 0.0001;  
 alg = cma(stepSize);  
@@ -122,12 +106,33 @@ eqCMA.leakagefactor = 1;
 eqCMA.Weights = [zeros(1,length(eqCMA.Weights)-1),1];   
 rxSym    =   equalize( eqCMA, rxSym, txSym(1:nTSHead) );
 
-fP=fP+1;subplot(3,3,fP);plot(rxSym,'.');title('Post CMA');
+fP=fP+1;subplot(3,3,fP);plot(rxSym(nTSHead+1:end),'.');title('Post CMA');
+
+nField = 0;
+for ii = 1 : nFTSDvd : length(rxSym)
+    nField = nField + 1;
+    FldErr(nField) = mean( txSym(ii:ii+nFTSLen)./rxSym(ii:ii+nFTSLen) );
+end
+FldErr = [FldErr,mean( txSym(end)./rxSym(end) )];
+
+symErr = interp1([1 : nFTSDvd : length(rxSym),length(rxSym)], FldErr.', [1 : length(rxSym)+1], 'linear').';%resample(FldErr,nFTSDvd,1).';
+symErr = symErr(1:length(rxSym));
+
+fP=fP+1;subplot(3,3,fP);stem(abs( txSym./rxSym ));hold on;plot(abs(symErr),'linewidth',3);hold off;title('Field Sync Magnitude Error');
+fP=fP+1;subplot(3,3,fP);stem(phase( txSym./rxSym ));hold on;plot(phase(symErr),'linewidth',3);hold off;title('Field Sync Phase Error');
+
+rxSym = rxSym .* symErr;
+
+fP=fP+1;subplot(3,3,fP);plot(rxSym,'.');title('Post Field Sync');
+
+fprintf( 'EVM Post-Filed Sync = %f%%\r\n', step(hEVM, step(hMod,step(hDem,rxSym)), rxSym) );
 
 [hMyDFE, rxSym, vyDcs] = fnDFE( hMyDFE, rxSym, [1:nTSHead], txSym );
 vyDcs = step( hDem, rxSym ).';
 
 fP=fP+1;subplot(3,3,fP);plot(rxSym(nTSHead+1:end),'.');title('Post Equalize');
+
+fP=fP+1;subplot(3,3,fP);stem(real(hMyDFE.e));hold on;stem(imag(hMyDFE.e));hold off;title('Equalizer error');
 
 fprintf( 'EVM Post-EQ = %f%%\r\n', step(hEVM, step(hMod,step(hDem,rxSym)), rxSym) );
  

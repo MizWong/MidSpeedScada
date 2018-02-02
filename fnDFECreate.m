@@ -8,8 +8,8 @@ hDFE.hRLS = fnRLSCreate( FFTAPs + FBTAPs, RLSLamda );
 hDFE.hMOD = hMOD;
 hDFE.hDEM = hDEM;
 
-hDFE.wFF = zeros(FFTAPs, 1);
-hDFE.wFB = zeros(FBTAPs, 1);
+hDFE.wFF = ones(FFTAPs, 1)/FFTAPs;
+hDFE.wFB = ones(FBTAPs, 1)/FBTAPs;
 
 hDFE.e = [];
 

@@ -11,7 +11,7 @@ close all;
 clc;
 
 %%
-SNR_IN = -10 : 2 :10;        %输入信噪比
+SNR_IN = -20 : 1 :10;        %输入信噪比
 % SNR_IN = -0;        %输入信噪比
 ilen = numel(SNR_IN);
 DiffFreq = zeros(1,ilen);
@@ -124,7 +124,7 @@ for iTimes = 1:1000
     data_Wave_up = carryWaveCos .* real(SymbolUp2880kLp) - carryWaveSin .* imag(SymbolUp2880kLp);
     
     %% 加入瑞利噪声
-    fd = 20;%20、40、114;
+    fd = 0.2;%20、40、114;
     pdb = [0 -22.3];
     tau = [0 5e-6];
     chan = rayleighchan( (1 / fs), fd, tau, pdb);
@@ -135,7 +135,7 @@ for iTimes = 1:1000
     for iSNR = 1:ilen
         
                 data_Gauss=data_Ray;
-%         data_Gauss = awgn(data_Ray,SNR_IN(iSNR), 'measured'); %加入高斯噪声
+         data_Gauss = awgn(data_Ray,SNR_IN(iSNR), 'measured'); %加入高斯噪声
         %%
         coefCos = 1;
         coefSin = 1;

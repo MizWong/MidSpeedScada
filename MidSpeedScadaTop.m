@@ -38,9 +38,10 @@ nFTSLen  =   1;
 tBB      =   0 : 1/FsBB : T - 1/FsBB;
 tIF      =   0 : 1/FsIF : T - 1/FsIF;
 
-txcPPM   =   10;
+txcVCO   =   300e6;
+txcPPM   =   1;
 txcFreq  =   100e3;
-txcFreq  =   txcFreq + (txcFreq / 1e6)*txcPPM;
+txcFreq  =   txcFreq + (txcVCO / 1e6)*txcPPM;
 txcPhi0  =   0;
 
 rxcFreq  =   100e3;

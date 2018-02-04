@@ -1,4 +1,10 @@
 function [ delta_w, hRLS ] = fnRLS( hRLS, vu, e, reset )
+% Upgrade RLS system object and calculate delta weight
+% 
+% vu : u
+% e  : error
+%
+% Miz.Wong, 2018
 
 M = length(vu);
 

@@ -29,7 +29,7 @@ coefIF   =   [1.09214851599383e-05,9.66672076672884e-06,1.38617827918353e-05,1.9
 hMod     =   comm.RectangularQAMModulator( M, 'BitInput', true );
 hDem     =   comm.RectangularQAMDemodulator( M, 'BitOutput', true );
 
-T        =   0.02;
+T        =   0.2;
 
 nTSHead  =   50;
 nFTSDvd  =   20;
@@ -82,7 +82,7 @@ txSymIF  =   txSymIF .* exp( 1j*( 2*pi*txcFreq*tIF' + txcPhi0 ) );
 %% Channel
 rxSymIF  =   txSymIF;
 rxSymIF  =   filter( RlChan, rxSymIF );
-rxSymIF  =   awgn( rxSymIF, 0, 'measured' );
+% rxSymIF  =   awgn( rxSymIF, 0, 'measured' );
 
 %% Receiver
 rxSymIF  =   rxSymIF ./ exp( 1j*( 2*pi*rxcFreq*tIF' + rxcPhi0 ) );

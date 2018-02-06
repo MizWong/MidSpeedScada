@@ -25,13 +25,19 @@ hDFE.e = zeros(length(vu), 1);
 %        |----------------------------------Calc error-----------------------|
 
 
-kP = 0.1;
-kI = 0.01;
-kD = 0;
+kP_Catch = 0.1;
+kI_Catch = 0.05;
+kD_Catch = 0;
+
+kP_Follow = 0.1;
+kI_Follow = 0.02;
+kD_Follow = 0;
 
 sIntegrate = 0;
 sPhase = 0;
 sPhsErrEx = 0;
+
+sPllLock  = false;
 
 ePhase = zeros(1, length(vu));
 
@@ -91,8 +97,21 @@ for ii = 1 : 1 : length(vu)
     hDFE.wFB = hDFE.wFB + deltaW_FB;
     
     ePhase(ii) = phase( vyd(ii) / vy(ii) );
-    sIntegrate = sIntegrate + ePhase(ii)*kI;
-    sPhase = sPhase + kP * ePhase(ii) + sIntegrate + kD * (ePhase(ii) - sPhsErrEx);
+    
+    if ~sPllLock && abs(ePhase(ii)) < 0.1 && abs(ePhase(ii-1)) < 0.1 && abs(ePhase(ii-1)) < 0.2;
+        sPllLock = true;
+        ii
+    end
+    
+    if ~sPllLock
+        sIntegrate = sIntegrate + ePhase(ii)*kI_Catch;
+        sPhase = sPhase + kP_Catch * ePhase(ii) + sIntegrate + kD_Catch * (ePhase(ii) - sPhsErrEx);
+    else
+        sIntegrate = sIntegrate + ePhase(ii)*kI_Follow;
+        sPhase = sPhase + kP_Follow * ePhase(ii) + sIntegrate + kD_Follow * (ePhase(ii) - sPhsErrEx);
+    end
+    
+    sPhsErrEx = ePhase(ii);
 end
 
 hDFE.ePhase = ePhase;

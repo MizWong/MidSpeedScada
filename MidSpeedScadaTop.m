@@ -57,6 +57,9 @@ hEVM     =   comm.EVM( 'ReferenceSignalSource', 'Estimated from reference conste
                        'ReferenceConstellation', constellation(hMod).' );
 
 hMyDFE   =   fnDFECreate(1, 1, 0.9, hMod, hDem);
+hPLLDFE  =   fnDFECreate(1, 1, 0.9, hMod, hDem);
+
+hPhNoise = comm.PhaseNoise('SampleRate',FsBB);
 
 %% Transmitter
 txBit    =   randi( [0,1], T*Rb, 1 );
@@ -79,7 +82,7 @@ txSymIF  =   txSymIF .* exp( 1j*( 2*pi*txcFreq*tIF' + txcPhi0 ) );
 %% Channel
 rxSymIF  =   txSymIF;
 rxSymIF  =   filter( RlChan, rxSymIF );
-rxSymIF  =   awgn( rxSymIF, -10, 'measured' );
+rxSymIF  =   awgn( rxSymIF, 0, 'measured' );
 
 %% Receiver
 rxSymIF  =   rxSymIF ./ exp( 1j*( 2*pi*rxcFreq*tIF' + rxcPhi0 ) );
@@ -87,7 +90,11 @@ rxSymIF  =   FilterConv( rxSymIF.', coefIF' ).' ;
 rxSymUp  =   zeros( length(rxSymIF) / IF_OSR, 1 );
 rxSymUp  =   rxSymIF( 1 : IF_OSR : end );
 
+rxSymUp  =   complex(real(rxSymUp) + 5, imag(rxSymUp)-5);
+
 fP=fP+1;subplot(3,3,fP);psd(spectrum.periodogram, rxSymUp, 'Fs',FsBB, 'CenterDC',true);title('PSD RX');
+
+% rxSymUp  =   hPhNoise(rxSymUp);
 
 rxSymUp  =   FilterConv( rxSymUp.', coefRRC' ).';
 
@@ -106,46 +113,39 @@ rxSym    =   rxSymUp(T0:BB_OSR:end);
 
 fprintf( 'T0 = %d\r\n', T0 );
 
-% fP=fP+1;subplot(3,3,fP);plot(rxSym,'.');title('Post DownSample');
-% fprintf( 'EVM Post-DownSample = %f%%\r\n', hEVM(rxSym(nTSHead+1:end)) );
-% 
-% hAGC = comm.AGC('DesiredOutputPower', 10, 'AveragingLength', 20,'AdaptationStepSize',0.05);
-% rxSym = step(hAGC, rxSym);
+rxSym = complex( real(rxSym) - mean(real(rxSym)), imag(rxSym) - mean(imag(rxSym)) );
 
-
-% fP=fP+1;subplot(3,3,fP);plot(rxSym(nTSHead+1:end),'.');title('Post AGC');
-% 
-% nField = 0;
-% for ii = 1 : nFTSDvd : length(rxSym)
-%     nField = nField + 1;
-%     FldErr(nField) = mean( txSym(ii:ii+nFTSLen)./rxSym(ii:ii+nFTSLen) );
-% end
-% FldErr = [FldErr,mean( txSym(end)./rxSym(end) )];
-% 
-% symErr = interp1([1 : nFTSDvd : length(rxSym),length(rxSym)], FldErr.', [1 : length(rxSym)+1], 'linear').';%resample(FldErr,nFTSDvd,1).';
-% symErr = symErr(1:length(rxSym));
-% 
-% fP=fP+1;subplot(3,3,fP);stem(abs( txSym./rxSym ));hold on;plot(abs(symErr),'linewidth',3);hold off;title('Field Sync Magnitude Error');
-% fP=fP+1;subplot(3,3,fP);stem(phase( txSym./rxSym ));hold on;plot(phase(symErr),'linewidth',3);hold off;title('Field Sync Phase Error');
-
-% rxSym = rxSym .* symErr;
-
-fP=fP+1;subplot(3,3,fP);plot(rxSym,'.');title('Post Field Sync');
+fP=fP+1;subplot(3,3,fP);plot(rxSym,'.');title('Post DownSample+DC Blocking');
 
 release(hEVM);
 
-fprintf( 'EVM Post-Filed Sync = %f%%\r\n', hEVM(rxSym) );
+fprintf( 'EVM Post-DownSample+DC Blocking = %f%%\r\n', hEVM(rxSym) );
 
-[hMyDFE, rxSym, vyDcs] = fnDFE( hMyDFE, rxSym, [1:nTSHead], txSym );
-vyDcs = step( hDem, rxSym ).';
+[hMyDFE, rxSymDFE, vyDcsDFE] = fnDFE( hMyDFE, rxSym, [1:nTSHead], txSym );
 
-fP=fP+1;subplot(3,3,fP);plot(rxSym(nTSHead+1:end),'.');title('Post Equalize');
+fP=fP+1;subplot(3,3,fP);plot(rxSymDFE(nTSHead+1:end),'.');title('Post Equalize');
 
 fP=fP+1;subplot(3,3,fP);stem(real(hMyDFE.e));hold on;stem(imag(hMyDFE.e));hold off;title('Equalizer error');
 
 release(hEVM);
 
-fprintf( 'EVM Post-EQ = %f%%\r\n', hEVM(rxSym(nTSHead+1:end)) );
+fprintf( 'EVM Post-EQ = %f%%\r\n', hEVM(rxSymDFE(nTSHead+1:end)) );
 
-BER = (sum( vyDcs(nTSHead*log2(M)+1:end)' ~= txBit(nTSHead*log2(M)+1:end) ) / length(txBit(nTSHead*log2(M)+1:end))) * 100
+
+[hPLLDFE, rxSymPLLDFE, vyDcsPLLDFE] = fnPLLDFE( hPLLDFE, rxSym, [1:nTSHead], txSym );
+
+fP=fP+1;subplot(3,3,fP);plot(rxSymPLLDFE(nTSHead+1:end),'.');title('Post PLL Equalize');
+
+fP=fP+1;subplot(3,3,fP);stem(real(hPLLDFE.e));hold on;stem(imag(hPLLDFE.e));hold off;title('PLL Equalizer error');
+
+fP=fP+1;subplot(3,3,fP);stem(hPLLDFE.ePhase);title('PLL Tracking Error');
+
+fP=fP+1;subplot(3,3,fP);stem(angle(rxSym./txSym));hold on;plot(angle(rxSymDFE./txSym));plot(angle(rxSymPLLDFE./txSym));hold off;title('Phase Error with DFE and PLLDFE');
+
+release(hEVM);
+
+BER = (sum( vyDcsDFE(nTSHead*log2(M)+1:end)' ~= txBit(nTSHead*log2(M)+1:end) ) / length(txBit(nTSHead*log2(M)+1:end))) * 100
+BER = (sum( vyDcsPLLDFE(nTSHead*log2(M)+1:end)' ~= txBit(nTSHead*log2(M)+1:end) ) / length(txBit(nTSHead*log2(M)+1:end))) * 100
+fprintf( 'EVM Post-PLLEQ = %f%%\r\n', hEVM(rxSymPLLDFE(nTSHead+1:end)) );
+
 %hs = spectrum.periodogram; figure;psd(hs, rxSym, 'Fs',FSIF, 'CenterDC',true)

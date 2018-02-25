@@ -25,12 +25,12 @@ hDFE.e = zeros(length(vu), 1);
 %        |----------------------------------Calc error-----------------------|
 
 
-kP_Catch = 0.1;
-kI_Catch = 0.05;
+kP_Catch = 0.0872;%0.1;
+kI_Catch = 0.0508;%0.05;
 kD_Catch = 0;
 
-kP_Follow = 0.1;
-kI_Follow = 0.02;
+kP_Follow = 0.01;%0.1;
+kI_Follow = 0.005;%0.02;
 kD_Follow = 0;
 
 sIntegrate = 0;

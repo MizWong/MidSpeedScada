@@ -22,7 +22,7 @@ nFTSLen  =   1;
 txcVCO   =   300e6;
 txcPPM   =   1;
 txcFreq  =   100e3;
-% txcFreq  =   txcFreq + (txcVCO / 1e6)*txcPPM;
+txcFreq  =   txcFreq + (txcVCO / 1e6)*txcPPM;
 txcPhi0  =   0;
 
 rxcFreq  =   100e3;
